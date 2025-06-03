@@ -20,7 +20,7 @@ figure('Position',[1035 909 380 820]);
   l = legend('Desired','Actual','Error','location','NW');
   l.Color = 'none';
   l.Box = 'off';
-  minimal;
+  axis off;
   ax.YAxis.Visible = 'on';
   ylabel('Joint Position')
   ylim([floor(min([xxd(:,1);X(:,1);err])),ceil(max([xxd(:,1);X(:,1);err]))]);
@@ -39,7 +39,7 @@ figure('Position',[1035 909 380 820]);
   y_ = cell2mat(arrayfun(yhelp,T,X(:,1),X(:,2),Xd(:,1),Xd(:,2), ...
                'UniformOutput',0));
   plot(T,y_,'k');
-  minimal;
+  axis off;
   ax.YAxis.Visible = 'on';
   ylabel({'Human Input','(Equilbrium)'})
   ylim([floor(min(y_)),ceil(max(y_))]);
@@ -56,7 +56,7 @@ figure('Position',[1035 909 380 820]);
   plot(T,power,'k');
   p1 = plot(T(i),power(i),'or');
   p1.MarkerFaceColor = 'r';
-  minimal;
+  axis off;
   ax.YAxis.Visible = 'on';
   ylabel('Human Power')
   ylim([floor(min(power*10))/10, ceil(max(power*10))/10]);
@@ -77,7 +77,7 @@ figure('Position',[1035 909 380 820]);
   plot(T, a,'k');
   plot(T,T.*0 + model.threshold,'--k');
   plot(T,T.*0 - model.threshold,'--k');
-  minimal;
+  axis off;
   ax.YAxis.Visible = 'on';
   ylabel('Activation')
   ylim([-2,2]);
@@ -91,7 +91,7 @@ figure('Position',[1035 909 380 820]);
   plot(T,ep,'k');
   ylim([floor(min(ep)),ceil(max(ep))]);
   xlim([tt(1),ceil(tt(end))]);
-  minimal;
+  axis off;
   ax.YAxis.Visible = 'on';
   ax.XAxis.Visible = 'on';
   ylabel('Equilibrium');
