@@ -1,3 +1,4 @@
+clear classes;
 % Time
 T = 10;
 dt = 0.1;
@@ -8,7 +9,7 @@ nsteps = numel(t);
 nSamples = 1;
 nTrainingRuns = 10;
 Epochs = 1000;
-LearningRate = 1e-4;
+LearningRate = 1e-3;
 
 use_adjoint = true;
 
@@ -71,10 +72,11 @@ input_layer = featureInputLayer(stateSize + 2*numel(t), 'Name', 'input');
 example_input = dlarray(X_train{1}, 'CB');
 net = dlnetwork([input_layer; hnode_layer], example_input);
 
-options = trainingOptions('adam', ...
+options = trainingOptions('sgdm', ...
     'InitialLearnRate', LearningRate, ...
     'MaxEpochs', Epochs, ...
     'MiniBatchSize', 1, ...
+    'GradientThreshold', 1.0, ...
     'Verbose', true);
   %  'Plots','training-progress');
 
@@ -93,11 +95,13 @@ ps = gobjects(nTrainingRuns, numel(nSamples));
 for k=1:nTrainingRuns
 
   % Decay Learning rate
-%  options.InitialLearnRate = options.InitialLearnRate / 2;
+  %options.InitialLearnRate = options.InitialLearnRate / 2;
 
   net = trainnet( ...
     X_train_matrix, Y_train_matrix, net, 'mse', options);
-  save(['./net-',num2str(k),'.mat'],'net');
+
+  if ~exist('./net', 'dir'), mkdir('./net'); end
+  save(['./net/net-',num2str(k),'.mat'],'net');
 
   gcf; hold all;
   title(['Training run:', num2str(k)]);
@@ -110,6 +114,8 @@ for k=1:nTrainingRuns
         ps(k-1,i).Color = [color_, 0.1];
       end
   end
-  print('-dpng',['training_run-',num2str(k),'.png']);
+
+  if ~exist('./training_run', 'dir'), mkdir('./training_run'); end
+  print('-dpng',['./training_run/',num2str(k),'.png']);
 end
 toc

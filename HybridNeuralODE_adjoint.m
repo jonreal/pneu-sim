@@ -10,6 +10,8 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
 
     HiddenSize
     NumHiddenLayers
+
+    OdeOptions
   end
 
   properties (Learnable)
@@ -32,6 +34,7 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
         opt.HiddenSize = 64
         opt.NumHiddenLayers = 2
         opt.Name = ""
+        opt.ode_options = odeset('RelTol', 1e-3, 'AbsTol', 1e-6);
       end
 
       layer.Name = opt.Name;
@@ -43,6 +46,7 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
       layer.ControlSize = controlSize;
       layer.HiddenSize = opt.HiddenSize;
       layer.NumHiddenLayers = opt.NumHiddenLayers;
+      layer.OdeOptions = opt.ode_options;
 
      end
 
@@ -52,17 +56,18 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
       layer.Parameters = abs( ...
           randn([layer.NumParameters, 1]) * 0.01) + 0.1;
 
-      % Initialize ForceNet weights (very small initialization)
-      layer.W1 = dlarray(randn(layer.HiddenSize, layer.StateSize) * 0.001);
-      layer.b1 = dlarray(zeros(layer.HiddenSize, 1));
+      % Input layer: Ensure a mix of positive and negative pre-activations
+      scale = 0.01;
+      layer.W1 = dlarray(scale * randn(layer.HiddenSize, layer.StateSize));
+      layer.b1 = dlarray(0.1 * (rand(layer.HiddenSize, 1) - 0.5));  % Range ~[-0.05, 0.05]
 
-      % Hidden layer 
-      layer.W2 = dlarray(randn(layer.HiddenSize, layer.HiddenSize) * 0.001);
-      layer.b2 = dlarray(zeros(layer.HiddenSize, 1));
+      % Hidden layer: same idea, wider spread
+      layer.W2 = dlarray(scale * randn(layer.HiddenSize, layer.HiddenSize));
+      layer.b2 = dlarray(0.1 * (rand(layer.HiddenSize, 1) - 0.5));
 
-      % Output layer
-      layer.Wout = dlarray(randn(1, layer.HiddenSize) * 0.001);
-      layer.bout = dlarray(zeros(1, 1));
+      % Output layer: broader init to avoid flat outputs
+      layer.Wout = dlarray(0.05 * randn(1, layer.HiddenSize));
+      layer.bout = dlarray(0.01 * randn(1, 1));
 
       % Debug output
       fprintf('Initialized HybridNeuralODE:\n');
@@ -86,7 +91,7 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
         force = layer.Wout * h2 + layer.bout;      % dlarray output
     end
 
-    function Y = predict(layer,X)
+    function [Y, mem] = forward(layer,X)
 
         wasDL = isa(X,'dlarray');          % remember type
         if wasDL, X = extractdata(X); end  % always work with double
@@ -100,16 +105,16 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
         U       = reshape(uvec,[layer.ControlSize nsteps]);
         u       = @(t) interp1(tvec,U.',t,'linear','extrap').';
 
+        pf   = log1p(exp(layer.Parameters));  % soft‑plus
+
         % guard for malformed time vector
         if tvec(1)==tvec(end) || any(diff(tvec)<=0)
             Ynum = zeros(layer.StateSize,nsteps,'like',x0);
         else
-            pf   = log1p(exp(layer.Parameters));  % soft‑plus
-            invM = 1/pf(1);
             rhs  = @(t,x) double(layer.Dynamics(pf,t,x,u(t)) + ...
                           [zeros(layer.StateSize-1,1); ...
-                           invM * extractdata(layer.forceNetPredict(x))]);
-            [~,Ymat] = ode45(rhs,double(tvec),double(x0));     % double output
+                           extractdata(layer.forceNetPredict(x))]);
+            [~,Ymat] = ode45(rhs,double(tvec),double(x0),layer.OdeOptions);
             Ynum = Ymat(:);
         end
 
@@ -119,16 +124,23 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
         else
             Y = Ynum;
         end
+
+        mem = struct();
+        mem.xtraj = reshape(Y,2,numel(tvec));
+        mem.tvec  = tvec;
+        mem.U     = U;
+        mem.u_interp = u;  % function handle
+        mem.x0 = x0;
+        mem.pf = pf;
     end
 
-    function [Y, mem] = forward(layer,X)
-      Y = predict(layer, X);
-      mem = [];
+    function Y = predict(layer,X)
+      [Y, ~] = forward(layer, X);
     end
 
     function [dLdX,dLdParameters, ...
               dLdW1,dLdb1,dLdW2,dLdb2,dLdWout,dLdbout] = ...
-              backward(layer,X,~,dLdY,~)
+              backward(layer,X,~,dLdY,mem)
 
     % ------------------------------------------------------------------
     % unpack training batch (single sample column‑vector layout [CB])
@@ -137,32 +149,34 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
     total     = numel(X);
     nsteps    = (total-layer.StateSize)/(1+layer.ControlSize);
 
-    x0        = X(1:layer.StateSize);
-    tvec      = X(layer.StateSize + (1:nsteps));
-    uvec      = X(layer.StateSize+nsteps + (1:nsteps*layer.ControlSize));
-    U         = reshape(uvec,[layer.ControlSize nsteps]);
-    u_interp  = @(t) interp1(tvec,U.',t,'linear','extrap').';
-
-    %pf        = double(layer.Parameters);               % 2×1 numeric
+    %x0        = X(1:layer.StateSize);
+    %tvec      = X(layer.StateSize + (1:nsteps));
+    %uvec      = X(layer.StateSize+nsteps + (1:nsteps*layer.ControlSize));
+    %U         = reshape(uvec,[layer.ControlSize nsteps]);
+    %
+    xtraj = mem.xtraj;        % [StateSize × nsteps] - already computed trajectory!
+    tvec = mem.tvec;          % time vector
+    U = mem.U;                % control matrix
+    pf = mem.pf;              % physics parameters (post-softplus)
+    u_interp  = mem.u_interp;  % function handle for control input 
 
     % --- very top of backward (after extractdata) -----------------
     theta = double(layer.Parameters);          % raw learnables (θ)
-    pf    = log1p(exp(theta));                 % same warp as predict
     sigm  = 1./(1+exp(-theta));                % ∂pf/∂θ = σ(θ)
-    invM  = 1/pf(1);                            % 1/p₁
 
     W1 = double(layer.W1);  b1 = double(layer.b1);
     W2 = double(layer.W2);  b2 = double(layer.b2);
     Wo = double(layer.Wout); bo = double(layer.bout);
 
-    % ------------------------------------------------------------------
-    % forward trajectory (pure double) ---------------------------------
-    % ------------------------------------------------------------------
-    relu = @(x) max(0,x);
-    rhs = @(t,x) double(layer.Dynamics(pf,t,x,u_interp(t)) + ...
-                 [0; invM * (Wo * relu(W2*relu(W1*x+b1)+b2) + bo)]);  % append g
-    [~,xtraj] = ode45(rhs,double(tvec),double(x0));
-    xtraj     = interp1(tvec,xtraj,tvec,'linear')';            % 2×nsteps
+
+    %% ------------------------------------------------------------------
+    %% forward trajectory (pure double) ---------------------------------
+    %% ------------------------------------------------------------------
+    %relu = @(x) max(0,x);
+    %rhs = @(t,x) double(layer.Dynamics(pf,t,x,u_interp(t)) + ...
+    %             [0; (Wo * relu(W2*relu(W1*x+b1)+b2) + bo)]);  % append g
+    %[~,xtraj] = ode45(rhs,double(tvec),double(x0));
+    %xtraj     = interp1(tvec,xtraj,tvec,'linear')';            % 2×nsteps
 
     % ------------------------------------------------------------------
     % reshape dL/dY into [StateSize × nsteps], get λ(T)
@@ -194,18 +208,20 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
         % -------- forward pass -----------------------------------------
         z1 = W1*x + b1;           m1 = double(z1>0);   a1 = m1 .* z1;
         z2 = W2*a1 + b2;          m2 = double(z2>0);   a2 = m2 .* z2;
-        g  = invM * (Wo * a2 + bo);                    % scaled output
+        g  = (Wo * a2 + bo);                    % scaled output
 
         % -------- ∂g/∂x  (row 1×State) -------------------------------
-        row1      = invM * (Wo .* m2');                % 1×Hidden
+        row1      = (Wo .* m2');                % 1×Hidden
         row2      = row1 * W2;                         % 1×Hidden
         dgdx_row  = (row2 .* m1') * W1;                % 1×State
 
         % -------- parameter gradients --------------------------------
-        dWo = invM * a2';                              dbo = invM;
+        dWo = a2';
+        dbo = 1;
 
-        tmp  = invM * (m2 .* Wo');                     % Hidden×1
-        dW2  = tmp * a1';                              db2 = tmp;
+        tmp  = (m2 .* Wo');                     % Hidden×1
+        dW2  = tmp * a1';
+        db2 = tmp;
 
         tmp2 = W2' * tmp;                              % Hidden×1
         dW1  = (tmp2 .* m1) * x';                      db1 = tmp2 .* m1;
@@ -213,7 +229,6 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
         dgdtheta = [dW1(:); db1(:); dW2(:); db2(:); dWo(:); dbo];
     end
     function dz = adjoint_ode(t,z)
-
         x  = interp1(tvec,xtraj',t,'linear')';     % 2×1
         ut = u_interp(t);
         lam  = z(1:layer.StateSize);
@@ -226,14 +241,16 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
         [g,dgdx_row,dgdtheta] = forwardAndJacobian(W1,b1,W2,b2,Wo,bo,x);
 
         dfdpf = [ 0 , 0 ;
-                  (pf(2)*x(2)-ut)/pf(1)^2 - g/pf(1) ,   -x(2)/pf(1) ];
+                  (pf(2)*x(2)-ut)/pf(1)^2,   -x(2)/pf(1) ];
 
 
         % λ̇  = -λᵗ(∂f/∂x + ∂g/∂x)ᵗ
         %dlam = -(dfdx + dgdx_row)' * lam;
 
         dfdx(2,:) = dfdx(2,:) + dgdx_row;     % add ∂g/∂x to the 2nd row
-        dlam      = -dfdx' * lam;             % λ̇ = -λᵗ(∂f/∂x)ᵗ
+
+        % λ̇ = -λᵗ(∂f/∂x)ᵗ
+        dlam = -dfdx' * lam + interp1(tvec,dY',t,'linear')';
 
         % accumulate physics‑param gradients
         dpf_dot = dfdpf' * lam;
@@ -246,7 +263,8 @@ classdef HybridNeuralODE_adjoint < nnet.layer.Layer
 
     % integrate adjoint backward
     [~,Z] = ode45( ...
-      @(t,z) double(adjoint_ode(t,z)),double(flip(tvec)),double(z0));
+      @(t,z) double(adjoint_ode(t,z)),double(flip(tvec)),double(z0), ...
+      layer.OdeOptions);
     Z     = flip(Z,1);
 
     % ------------------------------------------------------------------
