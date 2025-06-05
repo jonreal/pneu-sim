@@ -52,8 +52,10 @@ def generate_training_data(n_samples, ts, key):
 
         term = diffrax.ODETerm(f)
         solver = diffrax.Tsit5()
-        sol = diffrax.diffeqsolve(term, solver, ts[0], ts[-1], dt0=0.1,
-                                  y0=x0, saveat=diffrax.SaveAt(ts=ts), args=None)
+        sol = diffrax.diffeqsolve(
+            term, solver, ts[0], ts[-1], dt0=0.1,
+            y0=x0, saveat=diffrax.SaveAt(ts=ts), args=u_fn,
+            adjoint=diffrax.BacksolveAdjoint())
         data.append((x0, amp, sol.ys))
 
     return data
@@ -63,10 +65,13 @@ def main():
     T = 10.0
     dt = 0.1
     ts = jnp.arange(0.0, T, dt)
-    n_samples = 8
-    n_epochs = 100
+    n_samples = 128
+    n_epochs = 10
     lr = 1e-2
     key = jr.PRNGKey(0)
+
+    #adjoint = diffrax.BacksolveAdjoint()
+    adjoint = diffrax.RecursiveCheckpointAdjoint()
 
     # Generate data
     data = generate_training_data(n_samples, ts, key)
@@ -123,6 +128,37 @@ def main():
 
         plt.draw()
         plt.pause(0.1)
+
+    # Plot ForceNet force as a surface
+    from mpl_toolkits.mplot3d import Axes3D
+    fig_force = plt.figure()
+    ax_force = fig_force.add_subplot(111, projection='3d')
+
+    all_y = jnp.concatenate([y for (_, _, y) in data], axis=0)
+    y0_min, y0_max = all_y[:, 0].min(), all_y[:, 0].max()
+    y1_min, y1_max = all_y[:, 1].min(), all_y[:, 1].max()
+
+    margin = 0.1 * max(y0_max - y0_min, y1_max - y1_min)
+    y0_vals = jnp.linspace(y0_min - margin, y0_max + margin, 50)
+    y1_vals = jnp.linspace(y1_min - margin, y1_max + margin, 50)
+    Y0, Y1 = jnp.meshgrid(y0_vals, y1_vals)
+    Y_input = jnp.stack([Y0.ravel(), Y1.ravel()], axis=1)
+
+    forces = jax.vmap(model.force_net)(Y_input).reshape(50, 50)
+
+    ax_force.plot_surface(Y0, Y1, forces, cmap='viridis', alpha=0.6, label='Learned')
+
+    # Add ground truth force
+    def true_force(y):
+        p = [0.5, 0.5, -0.03, 0.1, 0.5]
+        return 1/p[0] * (-p[2]*y[1] - p[3]*y[0] - p[4]*y[0]**2)
+
+    true_vals = jnp.array([true_force(y) for y in Y_input]).reshape(50, 50)
+    ax_force.plot_surface(Y0, Y1, true_vals, cmap='coolwarm', alpha=0.6, label='True')
+    ax_force.set_title("Learned ForceNet Output")
+    ax_force.set_xlabel("y[0]")
+    ax_force.set_ylabel("y[1]")
+    ax_force.set_zlabel("force")
 
     plt.show()
 
