@@ -6,12 +6,12 @@ t = 0:dt:(T-dt);
 nsteps = numel(t);
 
 % Training Parameters
-nSamples = 1;
-nTrainingRuns = 10;
-Epochs = 1000;
+nSamples = 8;
+nTrainingRuns = 5;
+Epochs = 100;
 LearningRate = 1e-3;
 
-use_adjoint = true;
+use_adjoint = false;
 
 % Toy model
 dx =@(t,x,u,p) [ ...
@@ -32,6 +32,7 @@ Y_train = cell(size(nSamples, 1), 1);
 
 % Generate training set
 tic
+rn = zeros(nSamples, 1);
 for i = 1:nSamples
     x0 = [0; 0];
     rn = rand();
@@ -41,9 +42,14 @@ for i = 1:nSamples
 
     X_train{i} = [x0; t(:); u_vec(:)];
     Y_train{i} = x(:);
+    rn(i) = rn;
 end
 fprintf('Time to generate training set: \n');
 toc
+
+[~, idx] = sort(rn);
+X_train = X_train(idx);
+Y_train = Y_train(idx);
 
 % Set up Neural Hybrid
 % Everthing but the stiffness:
@@ -72,11 +78,10 @@ input_layer = featureInputLayer(stateSize + 2*numel(t), 'Name', 'input');
 example_input = dlarray(X_train{1}, 'CB');
 net = dlnetwork([input_layer; hnode_layer], example_input);
 
-options = trainingOptions('sgdm', ...
+options = trainingOptions('adam', ...
     'InitialLearnRate', LearningRate, ...
     'MaxEpochs', Epochs, ...
     'MiniBatchSize', 1, ...
-    'GradientThreshold', 1.0, ...
     'Verbose', true);
   %  'Plots','training-progress');
 
@@ -95,7 +100,7 @@ ps = gobjects(nTrainingRuns, numel(nSamples));
 for k=1:nTrainingRuns
 
   % Decay Learning rate
-  %options.InitialLearnRate = options.InitialLearnRate / 2;
+  options.InitialLearnRate = options.InitialLearnRate*0.9;
 
   net = trainnet( ...
     X_train_matrix, Y_train_matrix, net, 'mse', options);
