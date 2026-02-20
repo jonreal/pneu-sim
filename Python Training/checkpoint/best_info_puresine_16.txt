@@ -1,0 +1,2 @@
+best_epoch: 115
+best_loss:  3.743791e+01
