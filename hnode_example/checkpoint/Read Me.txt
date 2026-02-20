@@ -1,0 +1,31 @@
+Model 1: Set B = 6500, train nn_1010 only.
+
+Model 2: Set B = 5000, train nn_1010 only.
+
+Model 3: Set B = 4000, train nn_1010 only.
+
+Model 4: Set B = 3000, train nn_1010 only.
+
+Model 5: Set B = 2000, train nn_1010 only.
+
+Model 6: Set B = 1000, train nn_1010 only.
+
+Model 7: Set B = 0, train nn_1010 only.
+
+Model 8: Set B = 0, train nn_1010, 4545, 8080. [This stiffness is symmetric]
+
+Model 9: Set B = 0, train nn_1010 4545 8080 4050 5040
+
+Model 10: Set B = 0, train nn_1010 4545 8080 4050 5040 3060 6030
+
+Model 11: Set B = 0, train nn_1010, 4545, 8080, 4050, 5040, 3060, 6030, 2070, 7020
+
+Model 12: Set B = 0, train nn_1010 4545 8080 4050 5040 3060 6030 2070 7020 1080 8010
+
+Model 13: ......, 4530 4560 3045 6045
+
+Model 14: ......, 4520 4570 2045 7045
+
+Model 15: ......, 4510 4580 1045 8045
+
+Model 16: ......, 2020 3030 4040 5050 6060 7070
