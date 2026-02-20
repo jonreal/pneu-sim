@@ -13,8 +13,8 @@ def parse_args():
     p = argparse.ArgumentParser(description="Train hnode model and make plots (faithful to raw code).")
 
     # --- Data selection ---
-    p.add_argument("--data-dir", type=str, default="TRAIN DATA",
-                   help="Folder containing nn_xxyy.txt files (e.g., TRAIN DATA)")
+    p.add_argument("--data-dir", type=str, default="train_data",
+                   help="Folder containing nn_xxyy.txt files (e.g., train_data)")
     p.add_argument("--prefix", type=str, default="nn_",
                    help="Filename prefix (default nn_)")
     p.add_argument("--suffix", type=str, default="",
