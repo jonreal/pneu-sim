@@ -1,23 +1,16 @@
 # Hybrid Neural ODE for Antagonistic PAM Joint
 
-This repository contains the implementation of a hybrid physics-structured Neural ODE model for learning the dynamics of an antagonistic pneumatic artificial muscle (PAM) joint. The model integrates physical structure with a neural network to capture complex nonlinear behaviors.
+This repository contains a hybrid physics-structured Neural ODE model for learning the dynamics of an antagonistic pneumatic artificial muscle (PAM) joint.
 
 ---
 
 ## Repository Structure
 
-.
-├── TRAIN DATA/
-│   ├── nn_3060
-│   ├── nn_5050
-│   └── nn_8010
-│
-├── checkpoint/
-│   ├── hybrid_model_puresine_16.eqx
-│   ├── hybrid_opt_state_puresine_16.eqx
-│   ├── best_info_puresine_16.txt
-│   └── Read Me
-│
+```
+hnode_example/
+├── README.md
+├── main.py
+├── poly44_all_fits.mat
 ├── hnode/
 │   ├── core/
 │   │   └── models.py
@@ -27,21 +20,27 @@ This repository contains the implementation of a hybrid physics-structured Neura
 │   │   └── loop.py
 │   └── plot/
 │       └── plots.py
-│
-├── main.py
-└── poly44_all_fits.mat
+├── train_data/
+│   ├── nn_3060
+│   ├── nn_5050
+│   └── nn_8010
+└── checkpoint/
+    ├── hybrid_model_puresine_16.eqx
+    ├── hybrid_opt_state_puresine_16.eqx
+    └── best_info_puresine_16.txt
+```
 
 ---
 
 ## Dataset
 
-The `TRAIN DATA` folder contains three example datasets:
+The `train_data` folder contains three example datasets:
 
-- nn_3060  
-- nn_5050  
-- nn_8010  
+- `nn_3060`
+- `nn_5050`
+- `nn_8010`
 
-These datasets are provided for demonstration and testing purposes. Additional datasets can be added following the same naming and format.
+These datasets are provided for demonstration and testing purposes.
 
 ---
 
@@ -53,9 +52,7 @@ The `checkpoint` folder contains:
 - Optimizer state (`.eqx`)
 - Training summary (`.txt`)
 
-Only the final trained result is included. Intermediate training stages are not provided.
-
-The `Read Me` file inside the checkpoint folder describes the staged training process used to obtain the final model.
+Only the final trained result is included.
 
 ---
 
@@ -76,73 +73,74 @@ The `Read Me` file inside the checkpoint folder describes the staged training pr
 
 ### Train Model
 
-Run training using:
+```bash
+python main.py --data-dir train_data
+```
 
-python main.py --data-dir "TRAIN DATA"
+Optional arguments:
 
-Optional arguments include:
-
---codes 3060 5050 8010     # specify datasets  
---epochs 10000             # number of training epochs  
---lr 1e-2                  # learning rate  
---save-plots               # save plots to checkpoint folder  
+```bash
+--codes 3060 5050 8010
+--epochs 10000
+--lr 1e-2
+--save-plots
+```
 
 ---
 
 ### Resume Training
 
+```bash
 python main.py --resume \
     --load-model-name hybrid_model_puresine_16.eqx \
     --load-opt-name hybrid_opt_state_puresine_16.eqx
+```
 
 ---
 
 ### Evaluate R²
 
+```bash
 python main.py --eval-r2
-
-Results will be saved to:
-
-Verification/R2_results_225.csv
+```
 
 ---
 
 ### Plot Results
 
+```bash
 python main.py --save-plots
-
-Plots will be saved to the checkpoint directory.
+```
 
 ---
 
 ## Model Overview
 
-The system is modeled as a hybrid neural ODE with state:
+The system is modeled as:
 
+```
 y = [x, dx, Pf, Pe]
+```
 
-where:
-- x: displacement (mm)
-- dx: velocity (mm/s)
-- Pf, Pe: chamber pressures (kPa)
+- `x`: displacement (mm)  
+- `dx`: velocity (mm/s)  
+- `Pf`, `Pe`: chamber pressures (kPa)
 
-A neural network is used to model the net force:
+The neural network models the net force:
 
+```
 F = NN(mf, me, x, dx)
-
-while the pressure dynamics follow a physics-based formulation using chamber geometry and thermodynamics.
+```
 
 ---
 
 ## Notes
 
-- Data loading and preprocessing are implemented in `hnode/data/loaders.py`
-- Model definition is in `hnode/core/models.py`
-- Training loop is in `hnode/train/loop.py`
-- Plotting utilities are in `hnode/plot/plots.py`
-- Main entry point is `main.py`
-
-The implementation follows a direct simulation-based training approach using Diffrax ODE solvers.
+- Data loading: `hnode/data/loaders.py`
+- Model: `hnode/core/models.py`
+- Training: `hnode/train/loop.py`
+- Plotting: `hnode/plot/plots.py`
+- Entry point: `main.py`
 
 ---
 
