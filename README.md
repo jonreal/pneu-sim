@@ -30,6 +30,11 @@ hnode_example/
     └── best_info_puresine_16.txt
 ```
 
+**Description:**
+- `hnode/`: core model, data loader, training loop, and plotting modules  
+- `train_data/`: example datasets used for training  
+- `checkpoint/`: final trained model and optimizer state  
+
 ---
 
 ## Dataset
