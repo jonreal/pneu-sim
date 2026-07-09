@@ -3,7 +3,6 @@ import os
 import argparse
 import jax.random as jr
 
-# ---- Your package pieces (as we defined) ----
 from hnode.data.loaders import generate_file_paths, load_training_data_from_file
 from hnode.train.loop import TrainCfg, train_model, evaluate_r2
 from hnode.plot.plots import plot_datasets
@@ -30,9 +29,9 @@ def parse_args():
 
     # --- Training hyperparams (faithful) ---
     p.add_argument("--lr", type=float, default=1e-2, help="Learning rate (Adam)")
-    p.add_argument("--epochs", type=int, default=10000, help="Max epochs")
-    p.add_argument("--patience", type=int, default=500, help="Patience before LR reduce")
-    p.add_argument("--max-patience", type=int, default=1000, help="Hard stop patience")
+    p.add_argument("--epochs", type=int, default=5000, help="Max epochs")
+    p.add_argument("--patience", type=int, default=100, help="Patience before LR reduce")
+    p.add_argument("--max-patience", type=int, default=100, help="Hard stop patience")
     p.add_argument("--reduce-factor", type=float, default=0.95, help="LR reduce factor")
     p.add_argument("--threshold-per-dataset", type=float, default=3.0,
                    help="Early-stop threshold per dataset (raw: 3.0)")
@@ -151,7 +150,11 @@ def main():
 
     # --- Save R-square
     if args.eval_r2:
-        evaluate_r2(best_model, data_list)
+        evaluate_r2(
+            best_model,
+            data_list,
+            save_path=os.path.join(args.save_checkpoint_dir, "HNODE_R2_results.csv"),
+        )
 
     # --- Plot selected datasets (time series + hysteresis) ---
     which = "all"
