@@ -43,7 +43,7 @@ class TrainCfg:
     dt0: float = 1e-3
     max_steps: int = 100000
 
-def evaluate_r2(model, data_list, save_path="Verification/R2_results_225.csv"):
+def evaluate_r2(model, data_list, save_path="checkpoint/HNODE_R2_results.csv"):
     #Evaluate R2 for each dataset in data_list and save as CSV.
     #Columns: [dataset_id, mf, me, R2_x, R2_dx, R2_Pf, R2_Pe]
 
@@ -84,6 +84,9 @@ def evaluate_r2(model, data_list, save_path="Verification/R2_results_225.csv"):
 
     # Save as CSV
     header = "dataset_id,mf,me,R2_x,R2_dx,R2_Pf,R2_Pe"
+    save_dir = os.path.dirname(save_path)
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
     np.savetxt(save_path, results, delimiter=",", header=header, comments="")
     print(f"✅ R² results saved to {save_path}")
 
