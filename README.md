@@ -1,154 +1,137 @@
-# Hybrid Neural ODE for Antagonistic PAM Joint
+# pneu-sim
 
-This repository contains a hybrid physics-structured Neural ODE model for learning the dynamics of an antagonistic pneumatic artificial muscle (PAM) joint.
-
----
+This repository contains simulation and learning-based models for an antagonistic pneumatic artificial muscle (PAM) joint.
+The main model is a hybrid physics-structured Neural ODE. The repository also includes GRU/RNN, Koopman, and Kang analytical comparison baselines.
 
 ## Repository Structure
 
-```
-hnode_example/
-├── README.md
-├── main.py
-├── poly44_all_fits.mat
+```text
+pneu-sim/
+├── checkpoint/
 ├── hnode/
-│   ├── core/
-│   │   └── models.py
-│   ├── data/
-│   │   └── loaders.py
-│   ├── train/
-│   │   └── loop.py
-│   └── plot/
-│       └── plots.py
-├── train_data/
-│   ├── nn_3060
-│   ├── nn_5050
-│   └── nn_8010
-└── checkpoint/
-    ├── hybrid_model_puresine_16.eqx
-    ├── hybrid_opt_state_puresine_16.eqx
-    └── best_info_puresine_16.txt
+├── main.py
+├── README.md
+├── poly44_all_fits.mat
+└── comparisions/
+    ├── RNN/
+    │   ├── main_RNN.py
+    │   ├── RNN/
+    │   ├── checkpoint_RNN/
+    │   └── readme.md
+    ├── Koopman/
+    │   ├── main_Koopman.py
+    │   ├── Koopman/
+    │   ├── checkpoint_Koopman/
+    │   └── readme.md
+    └── Kang (analytical)/
+        ├── main_Kang.py
+        ├── Kang/
+        ├── checkpoint_Kang/
+        └── readme.md
 ```
 
-**Description:**
-- `hnode/`: core model, data loader, training loop, and plotting modules  
-- `train_data/`: example datasets used for training  
-- `checkpoint/`: final trained model and optimizer state  
+## Main Model: HNODE
 
----
+The top-level `main.py` runs the hybrid Neural ODE model.
 
-## Dataset
+```bash
+python main.py --data-dir "TRAIN DATA"
+```
 
-The `train_data` folder contains three example datasets:
+Use selected datasets:
 
-- `nn_3060`
-- `nn_5050`
-- `nn_8010`
+```bash
+python main.py --data-dir "TRAIN DATA" --codes 1010 4545 8080
+```
 
-These datasets are provided for demonstration and testing purposes.
+Resume from the saved HNODE checkpoint using the default checkpoint names:
 
----
+```bash
+python main.py --data-dir "TRAIN DATA" --resume
+```
 
-## Checkpoint
+Save R2 results and plots:
 
-The `checkpoint` folder contains:
+```bash
+python main.py --data-dir "TRAIN DATA" --eval-r2 --save-plots
+```
 
-- Final trained model (`.eqx`)
-- Optimizer state (`.eqx`)
-- Training summary (`.txt`)
+## GRU / RNN Baseline
 
-Only the final trained result is included.
+```bash
+python comparisions/RNN/main_RNN.py
+```
 
----
+By default, this script looks for the saved GRU checkpoint in `checkpoint_RNN/`. Use `--train-new` to ignore the saved checkpoint and train a new model.
+
+```bash
+python comparisions/RNN/main_RNN.py --train-new --codes 1010 4545 8080
+```
+
+## Koopman Baseline
+
+```bash
+python comparisions/Koopman/main_Koopman.py
+```
+
+By default, this script looks for the saved Koopman model in `checkpoint_Koopman/`. Use `--train-new` to ignore the saved model and train a new one.
+
+```bash
+python comparisions/Koopman/main_Koopman.py --train-new --codes 1010 4545 8080
+```
+
+## Kang Analytical Baseline
+
+```bash
+python "comparisions/Kang (analytical)/main_Kang.py"
+```
+
+The Kang baseline does not use a reusable saved model. Each run fits the analytical coefficients from the single-PAM data and then evaluates the joint datasets.
+
+## Data Folders
+
+The code expects joint datasets with names such as `nn_1010`, `nn_4545`, and `nn_8080`.
+The default joint-data folder name is:
+
+```text
+TRAIN DATA/
+```
+
+The Kang baseline also needs single-PAM experiment data. The default single-PAM folder name is:
+
+```text
+Single PAM data/
+```
+
+Custom data folders can be passed with:
+
+```bash
+--data-dir <joint_data_folder>
+--single-pam-dir <single_pam_data_folder>
+```
+
+## Checkpoint Folders
+
+- `checkpoint/`: saved HNODE model and HNODE outputs.
+- `comparisions/RNN/checkpoint_RNN/`: saved GRU/RNN model and RNN outputs.
+- `comparisions/Koopman/checkpoint_Koopman/`: saved Koopman model and Koopman outputs.
+- `comparisions/Kang (analytical)/checkpoint_Kang/`: Kang run outputs only.
+
+For HNODE, GRU/RNN, and Koopman, the checkpoint folders can contain reusable saved models. For Kang, the folder only stores outputs from the current run.
 
 ## Requirements
 
 - Python 3.9+
+- NumPy
+- SciPy
+- Matplotlib
 - JAX
 - Equinox
 - Diffrax
 - Optax
-- NumPy
-- SciPy
-- Matplotlib
-
----
-
-## Usage
-
-### Train Model
-
-```bash
-python main.py --data-dir train_data
-```
-
-Optional arguments:
-
-```bash
---codes 3060 5050 8010
---epochs 10000
---lr 1e-2
---save-plots
-```
-
----
-
-### Resume Training
-
-```bash
-python main.py --resume \
-    --load-model-name hybrid_model_puresine_16.eqx \
-    --load-opt-name hybrid_opt_state_puresine_16.eqx
-```
-
----
-
-### Evaluate R²
-
-```bash
-python main.py --eval-r2
-```
-
----
-
-### Plot Results
-
-```bash
-python main.py --save-plots
-```
-
----
-
-## Model Overview
-
-The system is modeled as:
-
-```
-y = [x, dx, Pf, Pe]
-```
-
-- `x`: displacement (mm)  
-- `dx`: velocity (mm/s)  
-- `Pf`, `Pe`: chamber pressures (kPa)
-
-The neural network models the net force:
-
-```
-F = NN(mf, me, x, dx)
-```
-
----
+- PyTorch
 
 ## Notes
 
-- Data loading: `hnode/data/loaders.py`
-- Model: `hnode/core/models.py`
-- Training: `hnode/train/loop.py`
-- Plotting: `hnode/plot/plots.py`
-- Entry point: `main.py`
-
----
-
-## License
-
-For research and academic use.
+Run commands from the top-level `pneu-sim/` folder.
+The folder name `comparisions` is kept to match the current project structure.
