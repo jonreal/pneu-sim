@@ -1,3 +1,7 @@
+% Preprocessing that produced the old data/data.mat fitting set.
+% Kept for provenance only -- neither the raw log 'e2_5050' nor
+% embedded_process_data() ships with this repo. See README.md.
+
 S = embedded_process_data('e2_5050');
 kt = 0.0255;
 R = 36;

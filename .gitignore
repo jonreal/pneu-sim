@@ -1,0 +1,6 @@
+# Legacy MATLAB empirical data (~56 MB); archived outside the repo.
+# See hybrid-dynamics-legacy/README.md.
+hybrid-dynamics-legacy/data/
+
+# macOS
+.DS_Store
