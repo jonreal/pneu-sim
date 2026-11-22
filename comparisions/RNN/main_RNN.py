@@ -89,7 +89,7 @@ def parse_args():
     p.add_argument(
         "--load-model-path",
         type=str,
-        default=str(SCRIPT_DIR / "checkpoint_RNN" / "model_1_checkpoint.pt"),
+        default=str(SCRIPT_DIR / "checkpoint_RNN" / "model_all_checkpoint.pt"),
         help="Load an existing GRU checkpoint and skip training. Default points to the saved checkpoint in this folder.",
     )
     p.add_argument(

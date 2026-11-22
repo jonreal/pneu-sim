@@ -64,6 +64,12 @@ python comparisions/RNN/main_RNN.py
 
 By default, this script looks for the saved GRU checkpoint in `checkpoint_RNN/`. Use `--train-new` to ignore the saved checkpoint and train a new model.
 
+The saved checkpoint, `comparisions/RNN/checkpoint_RNN/model_all_checkpoint.pt`, is the GRU used for the results in the paper. It was trained on the 29 training conditions with the two chamber air masses as inputs (`--use-mass`) and a recursive training horizon of 500 samples (`--pred-horizon 500`). To evaluate it on the sample datasets:
+
+```bash
+python comparisions/RNN/main_RNN.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
+```
+
 ```bash
 python comparisions/RNN/main_RNN.py --train-new --codes 1010 4545 8080
 ```
