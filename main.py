@@ -31,7 +31,8 @@ def parse_args():
     p.add_argument("--lr", type=float, default=1e-2, help="Learning rate (Adam)")
     p.add_argument("--epochs", type=int, default=5000, help="Max epochs")
     p.add_argument("--patience", type=int, default=100, help="Patience before LR reduce")
-    p.add_argument("--max-patience", type=int, default=100, help="Hard stop patience")
+    p.add_argument("--max-patience", type=int, default=1000,
+                   help="Stop after this many epochs without improvement (default 1000)")
     p.add_argument("--reduce-factor", type=float, default=0.95, help="LR reduce factor")
     p.add_argument("--threshold-per-dataset", type=float, default=3.0,
                    help="Early-stop threshold per dataset (raw: 3.0)")

@@ -100,9 +100,8 @@ Notes:
   learning rate (`--lr`, default 1e-2) is multiplied by `--reduce-factor` (0.95). Training stops
   after `--max-patience` epochs without improvement, after `--epochs` epochs (5000), or once the
   loss is below `--threshold-per-dataset` times the number of recordings and has stalled for
-  `--patience` epochs. `--patience` and `--max-patience` both default to 100, so with the defaults
-  training stops at the first stall; set `--max-patience` higher to allow learning-rate
-  reductions.
+  `--patience` epochs. The defaults are `--patience 100` and `--max-patience 1000`, so the
+  learning rate is reduced at every stall, as described in the paper.
 - Training from a random initialization is unstable without the temporary damping term used in
   the first seven curriculum stages (Section III-B of the paper). That term is fixed at zero in
   this code (`b` in `hnode/core/models.py`), which is its value in the final model.
