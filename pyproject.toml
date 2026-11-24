@@ -1,0 +1,33 @@
+[project]
+name = "pneu-sim"
+version = "0.1.0"
+description = "Hybrid Neural ODE model of an antagonistic pneumatic artificial muscle joint, with baseline models"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Xinyao Wang" },
+    { name = "Jonathan Realmuto" },
+]
+# Needed for the hybrid Neural ODE (main.py) and the Koopman baseline.
+# The JAX stack is pinned to the versions the code was run with for the paper.
+dependencies = [
+    "jax==0.8.2",
+    "equinox==0.13.2",
+    "diffrax==0.7.0",
+    "optax==0.2.6",
+    "numpy>=2.0",
+    "scipy>=1.14",
+    "matplotlib>=3.9",
+]
+
+[project.optional-dependencies]
+# PyTorch, needed only for the GRU and Kang baselines: uv sync --extra baselines
+baselines = ["torch>=2.4"]
+
+[project.urls]
+Repository = "https://github.com/jonreal/pneu-sim"
+Paper = "https://doi.org/10.48550/arXiv.2602.23670"
+
+[tool.uv]
+# The scripts are run from the repository folder; there is no package to build or install.
+package = false

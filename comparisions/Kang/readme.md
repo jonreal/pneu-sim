@@ -52,7 +52,7 @@ from hnode.data.loaders import generate_file_paths, load_training_data_from_file
 Run from the top-level `pneu-sim/` folder:
 
 ```bash
-python comparisions/Kang/main_Kang.py
+uv run python comparisions/Kang/main_Kang.py
 ```
 
 This run will:
@@ -67,19 +67,19 @@ This run will:
 Use dataset codes:
 
 ```bash
-python comparisions/Kang/main_Kang.py --codes <code1> <code2>
+uv run python comparisions/Kang/main_Kang.py --codes <code1> <code2>
 ```
 
 or use dataset ranges:
 
 ```bash
-python comparisions/Kang/main_Kang.py --ranges <start-end>
+uv run python comparisions/Kang/main_Kang.py --ranges <start-end>
 ```
 
 ## Custom Data Folders
 
 ```bash
-python comparisions/Kang/main_Kang.py \
+uv run python comparisions/Kang/main_Kang.py \
   --single-pam-dir "Single PAM data" \
   --data-dir "TRAIN DATA"
 ```

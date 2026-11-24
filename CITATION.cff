@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this code or data, please cite the paper below."
+title: "pneu-sim: hybrid Neural ODE model of an antagonistic pneumatic artificial muscle joint"
+type: software
+authors:
+  - family-names: Wang
+    given-names: Xinyao
+  - family-names: Realmuto
+    given-names: Jonathan
+repository-code: "https://github.com/jonreal/pneu-sim"
+preferred-citation:
+  type: article
+  title: "Physics-Embedded Neural ODEs for Learning Antagonistic Pneumatic Artificial Muscle Dynamics"
+  authors:
+    - family-names: Wang
+      given-names: Xinyao
+    - family-names: Realmuto
+      given-names: Jonathan
+  journal: "arXiv preprint arXiv:2602.23670"
+  year: 2026
+  doi: "10.48550/arXiv.2602.23670"
+  url: "https://arxiv.org/abs/2602.23670"

@@ -41,7 +41,7 @@ from hnode.data.loaders import generate_file_paths, load_training_data_from_file
 Run from the top-level `pneu-sim/` folder:
 
 ```bash
-python comparisions/RNN/main_RNN.py
+uv run python comparisions/RNN/main_RNN.py
 ```
 
 By default, the script first looks for the saved GRU checkpoint in `checkpoint_RNN/`. If the checkpoint is present, it loads the saved model and skips training. If it is missing, the script trains a new model and saves it to `checkpoint_RNN/`.
@@ -49,37 +49,37 @@ By default, the script first looks for the saved GRU checkpoint in `checkpoint_R
 The saved checkpoint, `checkpoint_RNN/model_all_checkpoint.pt`, is the GRU used for the results in the paper. It was trained on the 29 training conditions with the two chamber air masses as inputs (`--use-mass`) and a recursive training horizon of 500 samples (`--pred-horizon 500`). To evaluate it on the sample datasets:
 
 ```bash
-python comparisions/RNN/main_RNN.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
+uv run python comparisions/RNN/main_RNN.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
 ```
 
 ## Train a New Model
 
 ```bash
-python comparisions/RNN/main_RNN.py --train-new
+uv run python comparisions/RNN/main_RNN.py --train-new
 ```
 
 Use selected datasets:
 
 ```bash
-python comparisions/RNN/main_RNN.py --train-new --codes 1010 4545 8080
+uv run python comparisions/RNN/main_RNN.py --train-new --codes 1010 4545 8080
 ```
 
 or:
 
 ```bash
-python comparisions/RNN/main_RNN.py --train-new --ranges 10-80
+uv run python comparisions/RNN/main_RNN.py --train-new --ranges 10-80
 ```
 
 ## Evaluate and Plot
 
 ```bash
-python comparisions/RNN/main_RNN.py --eval-r2 --save-plots
+uv run python comparisions/RNN/main_RNN.py --eval-r2 --save-plots
 ```
 
 Disable plotting:
 
 ```bash
-python comparisions/RNN/main_RNN.py --no-plot
+uv run python comparisions/RNN/main_RNN.py --no-plot
 ```
 
 ## Useful Options

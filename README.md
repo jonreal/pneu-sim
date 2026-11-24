@@ -3,7 +3,8 @@
 Code, trained models, and sample data for the paper
 
 > X. Wang and J. Realmuto, "Physics-Embedded Neural ODEs for Learning Antagonistic Pneumatic
-> Artificial Muscle Dynamics."
+> Artificial Muscle Dynamics," arXiv:2602.23670, 2026.
+> https://doi.org/10.48550/arXiv.2602.23670
 
 The main model is a hybrid Neural ODE (HNODE) of an antagonistic pneumatic artificial muscle (PAM)
 joint: the joint and gas equations are written explicitly, and a neural network supplies the net
@@ -26,21 +27,31 @@ Release `v0.1.0` is the version that accompanies the paper.
 | `poly44_all_fits.mat` | Single-muscle characterization (polynomial fits) used for the air-mass estimate |
 | `train_data/` | Three sample recordings |
 | `comparisions/` | The baselines, each with its own `readme.md` |
+| `pyproject.toml`, `uv.lock` | Dependencies and their locked versions, for `uv` |
+| `CITATION.cff` | Citation information |
 | `hybrid-dynamics-legacy/` | An earlier MATLAB model, kept for reference only |
 
 ## Installation
 
-Python 3.9 or newer with NumPy, SciPy, Matplotlib, JAX, Equinox, Diffrax, and Optax. The GRU
-baseline also needs PyTorch.
+The dependencies are declared in `pyproject.toml` and locked in `uv.lock`. With
+[uv](https://docs.astral.sh/uv/) installed, run this once in the top-level `pneu-sim/` folder:
 
 ```bash
-pip install numpy scipy matplotlib jax equinox diffrax optax torch
+uv sync --extra baselines
 ```
 
-The commands in this file were last run with Python 3.14, JAX 0.8.2, Equinox 0.13.2,
-Diffrax 0.7.0, Optax 0.2.6, NumPy 2.4.1, SciPy 1.17.0, and Matplotlib 3.10.8, on CPU.
+This creates a virtual environment in `.venv/` with the locked versions. `--extra baselines` adds
+PyTorch, which only the GRU and Kang baselines need; plain `uv sync` is enough for the hybrid
+Neural ODE and the Koopman baseline.
 
-Run every command from the top-level `pneu-sim/` folder.
+Run every command from the top-level folder and prefix it with `uv run`, which uses that
+environment, as in the examples below. (Activating the environment with
+`source .venv/bin/activate` and calling `python` directly works as well.)
+
+The code needs Python 3.11 or newer. The JAX stack is pinned to the versions the code was run with
+for the paper: JAX 0.8.2, Equinox 0.13.2, Diffrax 0.7.0, and Optax 0.2.6. The commands in this
+file were last run from this environment with Python 3.14 on CPU. Without uv, install the packages
+listed in `pyproject.toml` with any other tool.
 
 ## Data
 
@@ -63,7 +74,7 @@ range that exists in the folder), and point to a folder with `--data-dir`.
 ## Quick start: evaluate the trained model
 
 ```bash
-python main.py --data-dir train_data --codes 3060 5050 8010 --resume --epochs 0 --eval-r2
+uv run python main.py --data-dir train_data --codes 3060 5050 8010 --resume --epochs 0 --eval-r2
 ```
 
 `--resume` loads the trained model from `checkpoint/`, `--epochs 0` skips training, and
@@ -81,20 +92,20 @@ previous one's best model with more recordings added (`checkpoint/README.md`).
 Continue from the trained model:
 
 ```bash
-python main.py --data-dir train_data --codes 3060 5050 8010 --resume
+uv run python main.py --data-dir train_data --codes 3060 5050 8010 --resume
 ```
 
 Start from a new, randomly initialized model:
 
 ```bash
-python main.py --data-dir train_data --codes 5050
+uv run python main.py --data-dir train_data --codes 5050
 ```
 
 Notes:
 
 - New models are saved as `checkpoint/hybrid_model_puresine_new.eqx` (with the optimizer state and
   a text file giving the best epoch and loss), so the trained model is not overwritten. Change the
-  names and folders with `--load-*` and `--save-*` (`python main.py --help`).
+  names and folders with `--load-*` and `--save-*` (`uv run python main.py --help`).
 - Each "epoch" is one optimizer step over all listed recordings, each integrated in full.
 - After `--patience` epochs without improvement the model returns to the best one and the
   learning rate (`--lr`, default 1e-2) is multiplied by `--reduce-factor` (0.95). Training stops
@@ -128,8 +139,8 @@ The numbers are for the three sample recordings and the trained model on an Appl
   `--solver` and `--dt` (in seconds) are accepted only together with `--batched`.
 
 ```bash
-python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched
-python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched --solver heun --dt 2e-3
+uv run python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched
+uv run python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched --solver heun --dt 2e-3
 ```
 
 The model in `checkpoint/` was trained with the default configuration. Evaluation (`--eval-r2`)
@@ -145,13 +156,13 @@ GRU (`comparisions/RNN/`), trained on the 29 training conditions with the chambe
 inputs and a recursive training horizon of 500 samples:
 
 ```bash
-python comparisions/RNN/main_RNN.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
+uv run python comparisions/RNN/main_RNN.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
 ```
 
 Koopman/EDMDc (`comparisions/Koopman/`):
 
 ```bash
-python comparisions/Koopman/main_Koopman.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
+uv run python comparisions/Koopman/main_Koopman.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
 ```
 
 Add `--train-new` to either command to train a new model instead of loading the saved one.
@@ -162,7 +173,7 @@ coefficients from single-muscle characterization data (`--single-pam-dir`, defau
 so this baseline cannot be run from the repository alone.
 
 ```bash
-python comparisions/Kang/main_Kang.py --single-pam-dir "Single PAM data" --data-dir train_data --codes 3060 5050 8010
+uv run python comparisions/Kang/main_Kang.py --single-pam-dir "Single PAM data" --data-dir train_data --codes 3060 5050 8010
 ```
 
 ## Saved models and outputs
@@ -174,6 +185,22 @@ python comparisions/Kang/main_Kang.py --single-pam-dir "Single PAM data" --data-
   outputs.
 - `checkpoint_Kang/` (created in the folder the Kang script is run from; change with
   `--output-dir`): outputs of the current run only.
+
+## Citation
+
+If you use this code or data, please cite:
+
+```bibtex
+@misc{wang2026physics,
+  title         = {Physics-Embedded Neural {ODEs} for Learning Antagonistic Pneumatic Artificial Muscle Dynamics},
+  author        = {Wang, Xinyao and Realmuto, Jonathan},
+  year          = {2026},
+  eprint        = {2602.23670},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.RO},
+  doi           = {10.48550/arXiv.2602.23670}
+}
+```
 
 ## Notes
 

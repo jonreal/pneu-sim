@@ -40,7 +40,7 @@ from hnode.data.loaders import generate_file_paths, load_training_data_from_file
 Run from the top-level `pneu-sim/` folder:
 
 ```bash
-python comparisions/Koopman/main_Koopman.py
+uv run python comparisions/Koopman/main_Koopman.py
 ```
 
 By default, the script first looks for the saved Koopman model in `checkpoint_Koopman/`. If the model is present, it loads the saved model and skips training. If it is missing, the script trains a new model and saves it to `checkpoint_Koopman/`.
@@ -48,31 +48,31 @@ By default, the script first looks for the saved Koopman model in `checkpoint_Ko
 ## Train a New Model
 
 ```bash
-python comparisions/Koopman/main_Koopman.py --train-new
+uv run python comparisions/Koopman/main_Koopman.py --train-new
 ```
 
 Use selected training datasets:
 
 ```bash
-python comparisions/Koopman/main_Koopman.py --train-new --codes 1010 4545 8080
+uv run python comparisions/Koopman/main_Koopman.py --train-new --codes 1010 4545 8080
 ```
 
 Use separate evaluation datasets:
 
 ```bash
-python comparisions/Koopman/main_Koopman.py --codes 1010 4545 8080 --eval-codes 3030 5050
+uv run python comparisions/Koopman/main_Koopman.py --codes 1010 4545 8080 --eval-codes 3030 5050
 ```
 
 ## Evaluate and Plot
 
 ```bash
-python comparisions/Koopman/main_Koopman.py --eval-r2 --save-plots
+uv run python comparisions/Koopman/main_Koopman.py --eval-r2 --save-plots
 ```
 
 Disable plotting:
 
 ```bash
-python comparisions/Koopman/main_Koopman.py --no-plot
+uv run python comparisions/Koopman/main_Koopman.py --no-plot
 ```
 
 ## Useful Options

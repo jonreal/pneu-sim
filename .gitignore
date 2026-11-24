@@ -7,3 +7,6 @@ hybrid-dynamics-legacy/data/
 
 # Python
 __pycache__/
+
+# uv virtual environment
+.venv/
