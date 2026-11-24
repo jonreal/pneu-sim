@@ -56,6 +56,31 @@ Save R2 results and plots:
 python main.py --data-dir "TRAIN DATA" --eval-r2 --save-plots
 ```
 
+### Training options
+
+`main.py` trains on the listed recordings, one curriculum stage per call. By default it uses the
+published configuration: the recordings are integrated one after another (Tsit5, fixed 1-ms steps).
+
+`--batched` integrates all recordings of a step in one stacked solve. With the default solver this
+is the same computation as the published loop, but it compiles faster and its compilation time and
+memory no longer grow with the number of recordings. On the three sample recordings in
+`train_data/`, from the published checkpoint, the loss agrees with the published loop to 5e-5 and
+the gradient to 5e-4 (relative, single precision).
+
+```bash
+python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched
+```
+
+`--solver heun --dt 2e-3`, together with `--batched`, replaces the integrator with Heun's method at
+2-ms steps. This is the fastest configuration reported in the paper's supplement. It is a different
+discretization, so its loss differs slightly from the published one (0.2% on the sample recordings).
+
+```bash
+python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched --solver heun --dt 2e-3
+```
+
+The saved model in `checkpoint/` was trained with the published (default) configuration.
+
 ## GRU / RNN Baseline
 
 ```bash

@@ -36,6 +36,16 @@ def parse_args():
     p.add_argument("--threshold-per-dataset", type=float, default=3.0,
                    help="Early-stop threshold per dataset (raw: 3.0)")
 
+    # --- Gradient computation (defaults = published training) ---
+    p.add_argument("--batched", action="store_true",
+                   help="Integrate all recordings in one stacked solve instead of one after "
+                        "another (same loss and gradient with the default solver, much faster "
+                        "to compile and run with many recordings)")
+    p.add_argument("--solver", type=str, default="tsit5", choices=["tsit5", "heun"],
+                   help="Integrator for --batched training (default tsit5, as published)")
+    p.add_argument("--dt", type=float, default=1e-3,
+                   help="Fixed integration step in seconds for --batched training (default 1e-3)")
+
     # Resume / checkpoint flags (replace your previous ones)
     p.add_argument("--resume", action="store_true", help="Resume training from load-* files")
 
@@ -76,6 +86,10 @@ def _parse_ranges(ranges_args):
 
 def main():
     args = parse_args()
+
+    if not args.batched and (args.solver != "tsit5" or args.dt != 1e-3):
+        raise SystemExit("--solver and --dt apply only with --batched; without it the "
+                         "published configuration (Tsit5, 1 ms) is used.")
 
     # --- Build file list (codes take precedence over ranges) ---
     if args.codes:
@@ -130,6 +144,9 @@ def main():
         reduce_factor=args.reduce_factor,
         threshold_per_dataset=args.threshold_per_dataset,
         resume_training=args.resume,
+        batched=args.batched,
+        solver=args.solver,
+        dt0=args.dt,
 
         # separate LOAD
         load_checkpoint_dir=args.load_checkpoint_dir,
