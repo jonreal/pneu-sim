@@ -4,3 +4,6 @@ hybrid-dynamics-legacy/data/
 
 # macOS
 .DS_Store
+
+# Python
+__pycache__/

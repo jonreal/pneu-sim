@@ -1,168 +1,181 @@
 # pneu-sim
 
-This repository contains simulation and learning-based models for an antagonistic pneumatic artificial muscle (PAM) joint.
-The main model is a hybrid physics-structured Neural ODE. The repository also includes GRU/RNN, Koopman, and Kang analytical comparison baselines.
+Code, trained models, and sample data for the paper
 
-## Repository Structure
+> X. Wang and J. Realmuto, "Physics-Embedded Neural ODEs for Learning Antagonistic Pneumatic
+> Artificial Muscle Dynamics."
 
-```text
-pneu-sim/
-├── checkpoint/
-├── hnode/
-├── main.py
-├── README.md
-├── poly44_all_fits.mat
-└── comparisions/
-    ├── RNN/
-    │   ├── main_RNN.py
-    │   ├── RNN/
-    │   ├── checkpoint_RNN/
-    │   └── readme.md
-    ├── Koopman/
-    │   ├── main_Koopman.py
-    │   ├── Koopman/
-    │   ├── checkpoint_Koopman/
-    │   └── readme.md
-    └── Kang (analytical)/
-        ├── main_Kang.py
-        ├── Kang/
-        ├── checkpoint_Kang/
-        └── readme.md
-```
+The main model is a hybrid Neural ODE (HNODE) of an antagonistic pneumatic artificial muscle (PAM)
+joint: the joint and gas equations are written explicitly, and a neural network supplies the net
+force of the two muscles as a function of position, velocity, and the two chamber air masses. The
+repository also contains the three baselines compared in the paper (GRU, Koopman/EDMDc, and a
+Kang-type analytical model).
 
-## Main Model: HNODE
+Release `v0.1.0` is the version that accompanies the paper.
 
-The top-level `main.py` runs the hybrid Neural ODE model.
+## Contents
 
-```bash
-python main.py --data-dir "TRAIN DATA"
-```
+| Path | What it is |
+|---|---|
+| `main.py` | Command-line entry point for the hybrid Neural ODE: training, evaluation, plots |
+| `hnode/core/models.py` | The model: joint dynamics, pressure dynamics, learned force network |
+| `hnode/data/loaders.py` | Reads a recording, filters it, and estimates the chamber air masses |
+| `hnode/train/loop.py` | Training loop, loss functions, and R² evaluation |
+| `hnode/plot/plots.py` | Time-series and hysteresis-loop plots |
+| `checkpoint/` | The trained model used for the results in the paper (see `checkpoint/README.md` for the training curriculum) |
+| `poly44_all_fits.mat` | Single-muscle characterization (polynomial fits) used for the air-mass estimate |
+| `train_data/` | Three sample recordings |
+| `comparisions/` | The baselines, each with its own `readme.md` |
+| `hybrid-dynamics-legacy/` | An earlier MATLAB model, kept for reference only |
 
-Use selected datasets:
+## Installation
+
+Python 3.9 or newer with NumPy, SciPy, Matplotlib, JAX, Equinox, Diffrax, and Optax. The GRU
+baseline also needs PyTorch.
 
 ```bash
-python main.py --data-dir "TRAIN DATA" --codes 1010 4545 8080
+pip install numpy scipy matplotlib jax equinox diffrax optax torch
 ```
 
-Resume from the saved HNODE checkpoint using the default checkpoint names:
+The commands in this file were last run with Python 3.14, JAX 0.8.2, Equinox 0.13.2,
+Diffrax 0.7.0, Optax 0.2.6, NumPy 2.4.1, SciPy 1.17.0, and Matplotlib 3.10.8, on CPU.
+
+Run every command from the top-level `pneu-sim/` folder.
+
+## Data
+
+Each recording is one co-contraction condition. A file named `nn_XXYY` was recorded with the
+flexor commanded to `XX` psi and the extensor to `YY` psi (gauge) before the valves were closed;
+`nn_3060` is 30 psi flexor, 60 psi extensor. A recording is a tab-separated text file sampled at
+1 kHz. The loader uses the frame counter (ms), the joint angle `x` (deg), the motor current
+`current` (A), and the measured chamber pressures `pm1` (flexor) and `pm2` (extensor), in psi
+gauge. It converts them to tendon displacement (mm), external force (mN), and absolute pressure
+(kPa), and estimates the two chamber air masses from the initial pressures and the equilibrium
+positions.
+
+`train_data/` holds three sample recordings (`nn_3060`, `nn_5050`, `nn_8010`), enough to run every
+command below. The full set of 225 recordings used in the paper is not included in this
+repository.
+
+Select recordings with `--codes 3060 5050` (a list) or `--ranges 10-80` (every 5-psi pair in the
+range that exists in the folder), and point to a folder with `--data-dir`.
+
+## Quick start: evaluate the trained model
 
 ```bash
-python main.py --data-dir "TRAIN DATA" --resume
+python main.py --data-dir train_data --codes 3060 5050 8010 --resume --epochs 0 --eval-r2
 ```
 
-Save R2 results and plots:
+`--resume` loads the trained model from `checkpoint/`, `--epochs 0` skips training, and
+`--eval-r2` simulates each recording from its first sample and writes the coefficient of
+determination of each state to `checkpoint/HNODE_R2_results.csv`. For the three sample recordings
+the displacement R² is 0.965, 0.984, and 0.877. The script then plots the measured and predicted
+responses; add `--save-plots` to save the figure in the checkpoint folder.
+
+## Training
+
+One call of `main.py` trains on the listed recordings until the stopping rule is met and keeps the
+best model. The paper's model was trained as a curriculum of 16 such calls, each started from the
+previous one's best model with more recordings added (`checkpoint/README.md`).
+
+Continue from the trained model:
 
 ```bash
-python main.py --data-dir "TRAIN DATA" --eval-r2 --save-plots
+python main.py --data-dir train_data --codes 3060 5050 8010 --resume
 ```
 
-### Training options
+Start from a new, randomly initialized model:
 
-`main.py` trains on the listed recordings, one curriculum stage per call. By default it uses the
-published configuration: the recordings are integrated one after another (Tsit5, fixed 1-ms steps).
+```bash
+python main.py --data-dir train_data --codes 5050
+```
 
-`--batched` integrates all recordings of a step in one stacked solve. With the default solver this
-is the same computation as the published loop, but it compiles faster and its compilation time and
-memory no longer grow with the number of recordings. On the three sample recordings in
-`train_data/`, from the published checkpoint, the loss agrees with the published loop to 5e-5 and
-the gradient to 5e-4 (relative, single precision).
+Notes:
+
+- New models are saved as `checkpoint/hybrid_model_puresine_new.eqx` (with the optimizer state and
+  a text file giving the best epoch and loss), so the trained model is not overwritten. Change the
+  names and folders with `--load-*` and `--save-*` (`python main.py --help`).
+- Each "epoch" is one optimizer step over all listed recordings, each integrated in full.
+- After `--patience` epochs without improvement the model returns to the best one and the
+  learning rate (`--lr`, default 1e-2) is multiplied by `--reduce-factor` (0.95). Training stops
+  after `--max-patience` epochs without improvement, after `--epochs` epochs (5000), or once the
+  loss is below `--threshold-per-dataset` times the number of recordings and has stalled for
+  `--patience` epochs. `--patience` and `--max-patience` both default to 100, so with the defaults
+  training stops at the first stall; set `--max-patience` higher to allow learning-rate
+  reductions.
+- Training from a random initialization is unstable without the temporary damping term used in
+  the first seven curriculum stages (Section III-B of the paper). That term is fixed at zero in
+  this code (`b` in `hnode/core/models.py`), which is its value in the final model.
+
+### Faster training
+
+By default the gradient is computed as in the published training: the recordings are integrated
+one after another with a fifth-order solver (Tsit5) at fixed 1-ms steps. Two options make this
+faster. Neither changes the model or the loss.
+
+| Option | What changes | Loss | Compile | Per step |
+|---|---|---|---|---|
+| *(default)* | Published configuration | 129.144 | 185 s | 16.8 s |
+| `--batched` | All recordings stacked into one solve, same solver | 129.151 | 69 s | 11.6 s |
+| `--batched --solver heun --dt 2e-3` | Stacked solve with Heun's method at 2-ms steps | 128.929 | 60 s | 2.8 s |
+
+The numbers are for the three sample recordings and the trained model on an Apple M3 Ultra (CPU).
+
+- `--batched` is the same computation as the default. In this test the loss differed by 5e-5 and
+  the gradient by 5e-4 (relative, single precision). Its compilation time and memory do not grow
+  with the number of recordings, which matters most for the later curriculum stages (29
+  recordings).
+- `--solver heun --dt 2e-3` is a coarser discretization, so its loss differs slightly (0.2% here).
+  `--solver` and `--dt` (in seconds) are accepted only together with `--batched`.
 
 ```bash
 python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched
-```
-
-`--solver heun --dt 2e-3`, together with `--batched`, replaces the integrator with Heun's method at
-2-ms steps. This is the fastest configuration reported in the paper's supplement. It is a different
-discretization, so its loss differs slightly from the published one (0.2% on the sample recordings).
-
-```bash
 python main.py --data-dir train_data --codes 3060 5050 8010 --resume --batched --solver heun --dt 2e-3
 ```
 
-The saved model in `checkpoint/` was trained with the published (default) configuration.
+The model in `checkpoint/` was trained with the default configuration. Evaluation (`--eval-r2`)
+and plots always use Tsit5 at 1 ms.
 
-## GRU / RNN Baseline
+## Baselines
 
-```bash
-python comparisions/RNN/main_RNN.py
-```
+Each baseline has its own entry script and `readme.md`. The GRU and Koopman baselines ship the
+models used in the paper and load them by default; their default data folder is `TRAIN DATA/`, so
+pass `--data-dir train_data` to use the sample recordings.
 
-By default, this script looks for the saved GRU checkpoint in `checkpoint_RNN/`. Use `--train-new` to ignore the saved checkpoint and train a new model.
-
-The saved checkpoint, `comparisions/RNN/checkpoint_RNN/model_all_checkpoint.pt`, is the GRU used for the results in the paper. It was trained on the 29 training conditions with the two chamber air masses as inputs (`--use-mass`) and a recursive training horizon of 500 samples (`--pred-horizon 500`). To evaluate it on the sample datasets:
+GRU (`comparisions/RNN/`), trained on the 29 training conditions with the chamber air masses as
+inputs and a recursive training horizon of 500 samples:
 
 ```bash
 python comparisions/RNN/main_RNN.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
 ```
 
-```bash
-python comparisions/RNN/main_RNN.py --train-new --codes 1010 4545 8080
-```
-
-## Koopman Baseline
+Koopman/EDMDc (`comparisions/Koopman/`):
 
 ```bash
-python comparisions/Koopman/main_Koopman.py
+python comparisions/Koopman/main_Koopman.py --data-dir train_data --codes 3060 5050 8010 --eval-r2 --no-plot
 ```
 
-By default, this script looks for the saved Koopman model in `checkpoint_Koopman/`. Use `--train-new` to ignore the saved model and train a new one.
+Add `--train-new` to either command to train a new model instead of loading the saved one.
+
+Kang-type analytical model (`comparisions/Kang/`): it has no saved model. Each run fits the force
+coefficients from single-muscle characterization data (`--single-pam-dir`, default
+`Single PAM data/`) and then simulates the joint. That data is not included in this repository,
+so this baseline cannot be run from the repository alone.
 
 ```bash
-python comparisions/Koopman/main_Koopman.py --train-new --codes 1010 4545 8080
+python comparisions/Kang/main_Kang.py --single-pam-dir "Single PAM data" --data-dir train_data --codes 3060 5050 8010
 ```
 
-## Kang Analytical Baseline
+## Saved models and outputs
 
-```bash
-python "comparisions/Kang (analytical)/main_Kang.py"
-```
-
-The Kang baseline does not use a reusable saved model. Each run fits the analytical coefficients from the single-PAM data and then evaluates the joint datasets.
-
-## Data Folders
-
-The code expects joint datasets with names such as `nn_1010`, `nn_4545`, and `nn_8080`.
-The default joint-data folder name is:
-
-```text
-TRAIN DATA/
-```
-
-The Kang baseline also needs single-PAM experiment data. The default single-PAM folder name is:
-
-```text
-Single PAM data/
-```
-
-Custom data folders can be passed with:
-
-```bash
---data-dir <joint_data_folder>
---single-pam-dir <single_pam_data_folder>
-```
-
-## Checkpoint Folders
-
-- `checkpoint/`: saved HNODE model and HNODE outputs.
-- `comparisions/RNN/checkpoint_RNN/`: saved GRU/RNN model and RNN outputs.
-- `comparisions/Koopman/checkpoint_Koopman/`: saved Koopman model and Koopman outputs.
-- `comparisions/Kang (analytical)/checkpoint_Kang/`: Kang run outputs only.
-
-For HNODE, GRU/RNN, and Koopman, the checkpoint folders can contain reusable saved models. For Kang, the folder only stores outputs from the current run.
-
-## Requirements
-
-- Python 3.9+
-- NumPy
-- SciPy
-- Matplotlib
-- JAX
-- Equinox
-- Diffrax
-- Optax
-- PyTorch
+- `checkpoint/`: the trained hybrid Neural ODE (`hybrid_model_puresine_16.eqx`), its optimizer
+  state, and the outputs of `main.py`.
+- `comparisions/RNN/checkpoint_RNN/`: the GRU model (`model_all_checkpoint.pt`) and its outputs.
+- `comparisions/Koopman/checkpoint_Koopman/`: the Koopman model (`koopman_model.npz`) and its
+  outputs.
+- `checkpoint_Kang/` (created in the folder the Kang script is run from; change with
+  `--output-dir`): outputs of the current run only.
 
 ## Notes
 
-Run commands from the top-level `pneu-sim/` folder.
-The folder name `comparisions` is kept to match the current project structure.
+The folder name `comparisions` is kept as is to match the import paths.
