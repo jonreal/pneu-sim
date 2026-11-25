@@ -29,7 +29,6 @@ Release `v0.1.0` is the version that accompanies the paper.
 | `comparisions/` | The baselines, each with its own `readme.md` |
 | `pyproject.toml`, `uv.lock` | Dependencies and their locked versions, for `uv` |
 | `CITATION.cff` | Citation information |
-| `hybrid-dynamics-legacy/` | An earlier MATLAB model, kept for reference only |
 
 ## Installation
 
